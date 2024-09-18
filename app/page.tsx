@@ -3,6 +3,7 @@
 import axios from "axios";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import Cookies from "js-cookie";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -17,6 +18,7 @@ const Login = () => {
         email,
         password,
       });
+      Cookies.set("token", response.data.token);
       const user = response.data.data;
       const role = user.role;
    

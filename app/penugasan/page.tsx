@@ -1,9 +1,9 @@
-"use client";
-
+'use client'
 import { useState, useEffect } from "react";
 import axios from "axios";
 import Link from "next/link";
 import Cookies from "js-cookie";
+import { useRouter } from "next/navigation";
 
 interface penugasan {
   id: number;
@@ -14,6 +14,7 @@ interface penugasan {
 }
 
 const Penugasan = () => {
+  const router = useRouter();
   const token = Cookies.get("token");
   const [dataPenugasan, setDataPenugasan] = useState<penugasan[]>([]);
 
@@ -24,6 +25,23 @@ const Penugasan = () => {
       .then((response) => setDataPenugasan(response.data.data))
       .catch((error) => console.error("Error fetching paslon items:", error));
   }, []);
+
+  const logout = async () => {
+    try {
+      await axios.post('http://localhost:8000/api/logout', {}, {
+        withCredentials: true,
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      Cookies.remove("token");
+
+      router.push("/");
+    } catch (error) {
+      console.error("Error during logout:", error);
+    }
+  };
 
   const deletePenugasan = (id: number) => {
     axios
@@ -42,12 +60,24 @@ const Penugasan = () => {
               Data Penugasan
             </h1>
             <div className="mb-6">
-              <Link href="peugasan/create">
-                <button className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">
+              <Link href="penugasan/create">
+                <button className="mr-4 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">
                   Tambah Tugas
                 </button>
               </Link>
+              <Link href="/pengumpulan-penugasan">
+                <button className="mr-4 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">
+                  Pengumpulan Tugas
+                </button>
+              </Link>
+              <button
+                onClick={logout}
+                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+              >
+                Logout
+              </button>
             </div>
+
             {dataPenugasan.length > 0 ? (
               <ul>
                 {dataPenugasan.map((penugasanItem) => (
@@ -61,7 +91,7 @@ const Penugasan = () => {
                       </p>
                       <p className="text-gray-600">
                         Code : {penugasanItem.code}
-                      </p>deadline
+                      </p>
                       <p className="text-gray-600">
                         Deadline : {penugasanItem.deadline}
                       </p>

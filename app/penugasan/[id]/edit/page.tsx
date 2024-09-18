@@ -24,7 +24,7 @@ const Edit = () => {
       axios
         .get(`http://localhost:8000/api/penugasan/${id}`)
         .then((response) => {
-          const penugasan = response.data.data.data;
+          const penugasan = response.data.data;
           setNamaLaporan(penugasan.nama_laporan);
           setCode(penugasan.code);
           setDeadline(penugasan.deadline);
