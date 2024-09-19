@@ -23,7 +23,7 @@ const Login = () => {
       const role = user.role;
    
       setMassage('Login successful');
-      if (role === 'superViser') {
+      if (role === 'superVisor') {
         router.push("/penugasan"); // Supervisor masuk ke form penugasan
       } else if (role === 'karyawan') {
         router.push("/pengumpulan-penugasan"); // Karyawan masuk ke pengumpulan penugasan

@@ -1,9 +1,17 @@
-'use client'
+'use client';
 import { useState, useEffect } from "react";
 import axios from "axios";
-import Link from "next/link";
 import Cookies from "js-cookie";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+
+interface penugasan {
+  id: number;
+  nama_laporan: string;
+  code: number;
+  deadline: string;
+  keterangan: string;
+}
 
 interface pengumpulanPenugasan {
   id: number;
@@ -35,17 +43,81 @@ interface pengumpulanPenugasan {
 }
 
 const PengumpulanPenugasan = () => {
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [pengumpulanPenugasan, setPengumpulanPenugasan] = useState<pengumpulanPenugasan[]>([]);
+  const [showPopup, setShowPopup] = useState(false);
+  const togglePopup = () => setShowPopup(!showPopup);
+  const [link, setLink] = useState('');
+  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null); 
+  const [error, setError] = useState('');
+  const [userId, setUserId] = useState<number | null>(null);
   const router = useRouter();
   const token = Cookies.get("token");
-  const [dataPengumpulanPenugasan, setDataPengumpulanPenugasan] = useState<pengumpulanPenugasan[]>([]);
+  const [penugasan, setPenugasan] = useState<penugasan[]>([]);
+
+  useEffect(() => {
+    if (token) {
+      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      axios
+        .get("http://localhost:8000/api/user")
+        .then((response) => {
+          setUserId(response.data.id);
+        })
+        .catch((error) => console.error("Error fetching user data:", error));
+        
+      axios
+        .get("http://localhost:8000/api/penugasan")
+        .then((response) => setPenugasan(response.data.data))
+        .catch((error) => console.error("Error fetching pengumpulan penugasan items:", error));
+    }
+  }, [token]);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+        try {
+          const token = Cookies.get("token");
+          if (token) {
+            axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+            const userResponse = await axios.get("http://localhost:8000/api/user");
+            setUserRole(userResponse.data.role);
+          }
+        } catch (error) {
+          console.error("Error fetching user data:", error);
+        }
+      };
+  
+      fetchUserData();
+
+    axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    axios
+  }, []);
 
   useEffect(() => {
     axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     axios
       .get("http://localhost:8000/api/pengumpulan-penugasan")
-      .then((response) => setDataPengumpulanPenugasan(response.data.data))
-      .catch((error) => console.error("Error fetching pengumpulan penugasan items:", error));
+      .then((response) => setPengumpulanPenugasan(response.data.data))
+      .catch((error) => console.error("Error fetching paslon items:", error));
   }, []);
+
+  // Submit form
+  const handleSubmit = async (e: { preventDefault: () => void; }) => {
+    e.preventDefault();
+    
+    try {
+      await axios.post(`http://localhost:8000/api/pengumpulan-penugasan`, {
+        link_google_drive: link,
+        penugasan_id: selectedTaskId,
+        user_id: userId,
+        status: 'baru'
+      });
+
+      alert('Link berhasil disimpan!');
+      togglePopup();
+    } catch (error) {
+      setError('Gagal menyimpan link, pastikan link valid.');
+    }
+  };
 
   const logout = async () => {
     try {
@@ -57,12 +129,12 @@ const PengumpulanPenugasan = () => {
       });
 
       Cookies.remove("token");
-
       router.push("/");
     } catch (error) {
       console.error("Error during logout:", error);
     }
   };
+
   return (
       <div className="min-h-screen bg-gray-100 py-8 px-4">
         <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden">
@@ -71,11 +143,13 @@ const PengumpulanPenugasan = () => {
               Data Pengumpulan Penugasan
             </h1>
             <div className="mb-6">
-              <Link href="pengumpulan-penugasan/create">
+            {userRole == "superVisor" && (
+              <Link href="/penugasan">
                 <button className="mr-4 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">
-                  + Tambah Atau Buat
+                  Buat Tugas Baru
                 </button>
               </Link>
+            )}
               <button
                 onClick={logout}
                 className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
@@ -83,45 +157,39 @@ const PengumpulanPenugasan = () => {
                 Logout
               </button>
             </div>
-            {dataPengumpulanPenugasan.length > 0 ? (
+            {penugasan.length > 0 ? (
               <ul>
-                {dataPengumpulanPenugasan.map((pengumpulanPenugasanItem) => (
+                {penugasan.map((penugasanItem) => (
                   <li
-                    key={pengumpulanPenugasanItem.id}
+                    key={penugasanItem.id}
                     className="bg-gray-50 p-4 mb-4 rounded-lg shadow-sm flex items-center justify-between"
                   >
                     <div className="flex flex-col">
                       <p className="text-black">
-                        Nama Tugas: {pengumpulanPenugasanItem.penugasan.nama_laporan}
+                        Nama Tugas: {penugasanItem.nama_laporan}
                       </p>
                       <p className="text-black">
-                        Code Tugas: {pengumpulanPenugasanItem.penugasan.code}
+                        Code Tugas: {penugasanItem.code}
                       </p>
                       <p className="text-black">
-                        Deadline: {pengumpulanPenugasanItem.penugasan.deadline}
+                        Deadline: {penugasanItem.deadline}
                       </p>
                       <p className="text-black">
-                        Keterangan: {pengumpulanPenugasanItem.penugasan.keterangan}
-                      </p>
-                      <p className="text-gray-600">
-                        Link Google Drive : {pengumpulanPenugasanItem.link_google_drive}
-                      </p>
-                      <p className="text-gray-600">
-                        User : {pengumpulanPenugasanItem.user.name}
-                      </p>
-                      <p className="text-gray-600">
-                        Catatan : {pengumpulanPenugasanItem.catatan}
-                      </p>
-                      <p className="text-gray-600">
-                        Status : {pengumpulanPenugasanItem.status}
+                        Keterangan: {penugasanItem.keterangan}
                       </p>
                     </div>
                     <div className="flex space-x-2">
-                      <Link href={`/pengumpulan-penugasan/${pengumpulanPenugasanItem.id}/edit`}>
-                        <button className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600">
-                          Edit
-                        </button>
-                      </Link>
+                    {userRole == "karyawan" && (
+                    <button
+                      className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
+                      onClick={() => {
+                        setSelectedTaskId(penugasanItem.id); // Simpan penugasan_id
+                        togglePopup();
+                      }}
+                    >
+                      Kerjakan
+                    </button>
+                    )}
                     </div>
                   </li>
                 ))}
@@ -131,9 +199,79 @@ const PengumpulanPenugasan = () => {
                 Daftar Tugas Kosong.
               </p>
             )}
+              <div>
+              {pengumpulanPenugasan.length > 0 ? (
+                <ul>
+                  {pengumpulanPenugasan.map((pengumpulanPenugasanItem) => (
+                    <li
+                      key={pengumpulanPenugasanItem.id}
+                      className="bg-gray-50 p-4 mb-4 rounded-lg shadow-sm flex items-center justify-between"
+                    >
+                      <div className="flex flex-col">
+                        <p className="text-gray-600">
+                          Link Google Drive : {pengumpulanPenugasanItem.link_google_drive}
+                        </p>
+                        <p className="text-gray-600">
+                          User : {pengumpulanPenugasanItem.user.name}
+                        </p>
+                        <p className="text-gray-600">
+                          Catatan : {pengumpulanPenugasanItem.catatan}
+                        </p>
+                        <p className="text-gray-600">
+                          Status : {pengumpulanPenugasanItem.status}
+                        </p>
+                      </div>
+                      <div className="flex space-x-2">
+                        <Link href={`/pengumpulan-penugasan/${pengumpulanPenugasanItem.id}/edit`}>
+                          <button className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600">
+                            Edit
+                          </button>
+                        </Link>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="font-bold flex justify-center items-center">
+                  Daftar Tugas Kosong.
+                </p>
+              )}
+              </div>
           </div>
         </div>
+        {showPopup && (
+        <div className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex justify-center items-center">
+          <div className="bg-white p-6 rounded shadow-lg">
+            <h2 className="text-xl mb-4">Masukkan Link Google Drive</h2>
+
+            <form onSubmit={handleSubmit}>
+              <input
+                type="url"
+                placeholder="Masukkan Link Google Drive"
+                value={link}
+                onChange={(e) => setLink(e.target.value)}
+                className="border p-2 w-full mb-4"
+                required
+              />
+              {error && <p className="text-red-500">{error}</p>}
+
+              <button type="submit" className="bg-green-500 text-white px-4 py-2 rounded">
+                Simpan
+              </button>
+
+              <button
+                type="button"
+                onClick={togglePopup}
+                className="bg-red-500 text-white px-4 py-2 rounded ml-4"
+              >
+                Batal
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
       </div>
   );
 };
+
 export default PengumpulanPenugasan;
